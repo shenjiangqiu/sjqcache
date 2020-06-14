@@ -1,18 +1,20 @@
 #include "cache.h"
-
+#include <string>
 cache::cache(int way, int set, rep_policy p,
-             int mshr_num, int mshr_maxmerge) : num_way(way),
-                                                num_set(set),
-                                                policy(p),
-                                                tag_array(t_array(set, t_set(way))),
-                                                m_mshr(mshr_num, mshr_maxmerge)
+             int mshr_num, int mshr_maxmerge,
+             const std::string &name) : num_way(way),
+                                        num_set(set),
+                                        policy(p),
+                                        tag_array(t_array(set, t_set(way))),
+                                        m_mshr(mshr_num, mshr_maxmerge),
+                                        name(name)
 {
 }
 cache::access_ret cache::access(unsigned long long addr)
 {
 
     auto blockAddr = addr >> 6;
-  
+
     auto set = blockAddr % num_set;
     auto tag = blockAddr;
     if (policy == lru)
@@ -23,7 +25,7 @@ cache::access_ret cache::access(unsigned long long addr)
         //bug report :
         //there is a bug here:we may evict an entry that are waiting for fill
         bool all_reserved = true;
-        
+
         for (auto &entry : set_entry)
         {
             if (entry.get_status() != cache_entry::cache_entry_status::reserved)
@@ -37,7 +39,7 @@ cache::access_ret cache::access(unsigned long long addr)
                 //to the first place,and push to mshr
                 if (m_mshr.access(addr) != mshr::mshr_ret::ok)
                 {
-                    
+                    m_statistics.num_res_fail++;
                     return resfail;
                 }
                 entry.set_entry(blockAddr, cache_entry::cache_entry_status::reserved);
@@ -52,7 +54,7 @@ cache::access_ret cache::access(unsigned long long addr)
                     }
                     it->set_entry(temp.get_tag(), temp.get_status());
                 }
-                
+                m_statistics.num_miss++;
                 return miss;
             }
             if (entry.get_tag() == tag) //find the entry
@@ -71,14 +73,14 @@ cache::access_ret cache::access(unsigned long long addr)
                         }
                         it->set_entry(temp.get_tag(), temp.get_status());
                     }
-                    
+                    m_statistics.num_hit++;
                     return hit;
                 }
                 else //reserved
                 {
                     if (m_mshr.access(addr) != mshr::mshr_ret::ok)
                     {
-                        
+                        m_statistics.num_res_fail++;
                         return resfail;
                     }
 
@@ -93,9 +95,9 @@ cache::access_ret cache::access(unsigned long long addr)
                         }
                         it->set_entry(temp.get_tag(), temp.get_status());
                     }
-                    
 
                     //to the first place; and push to mshr
+                    m_statistics.num_hit_reserved++;
                     return hit_res;
                 }
             }
@@ -103,23 +105,25 @@ cache::access_ret cache::access(unsigned long long addr)
         }
         if (all_reserved)
         {
-            
+            m_statistics.num_res_fail++;
+
             return resfail;
         }
 
         if (m_mshr.access(addr) != mshr::mshr_ret::ok)
         {
-            
+            m_statistics.num_res_fail++;
+
             return resfail;
         }
         //not delete the last unreserved, and insert the new one to the top;
-        ASSERT((*the_last_unreserved_entry).get_status() !=cache_entry::cache_entry_status::reserved,"should not be reserved");
+        ASSERT((*the_last_unreserved_entry).get_status() != cache_entry::cache_entry_status::reserved, "should not be reserved");
         set_entry.erase(the_last_unreserved_entry);
 
         cache_entry entry;
         entry.set_entry(addr >> 6, cache_entry::cache_entry_status::reserved);
         set_entry.insert(set_entry.begin(), entry);
-        
+        m_statistics.num_miss++;
         return miss;
     }
     else

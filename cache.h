@@ -5,6 +5,7 @@
 #include <memory>
 #include <map>
 #include <iostream>
+#include <string>
 #ifndef NDEBUG
 #define ASSERT(condition, message)                                             \
     do                                                                         \
@@ -39,8 +40,8 @@ public:
         m_tag = tag;
         m_status = status;
     }
-    cache_entry_status get_status() { return m_status; }
-    unsigned long long get_tag() { return m_tag; }
+    cache_entry_status get_status() const { return m_status; }
+    unsigned long long get_tag() const { return m_tag; }
 
 private:
     cache_entry_status m_status;
@@ -53,7 +54,7 @@ public:
     using t_array = std::map<unsigned long long, t_merge>;
 
 public:
-    enum  class mshr_ret
+    enum class mshr_ret
     {
         ok,
         entry_full,
@@ -86,6 +87,19 @@ private:
     t_array array;
     friend class cache_debugger;
 };
+struct statistics
+{
+    unsigned long long num_hit = 0;
+    unsigned long long num_miss = 0;
+    unsigned long long num_hit_reserved = 0;
+    unsigned long long num_res_fail = 0;
+};
+template <typename OSTYPE>
+OSTYPE &operator<<(OSTYPE &os, const statistics &stat)
+{
+    os << "num_hit " << stat.num_hit << ",num_miss " << stat.num_miss << ", num_hit_reserved " << stat.num_hit_reserved << ",num_res_fail " << stat.num_res_fail;
+    return os;
+}
 class cache
 {
     using t_set = std::vector<cache_entry>;
@@ -93,6 +107,10 @@ class cache
     using t_array = std::vector<t_set>;
 
 public:
+    inline
+    static unsigned long long get_block_addr(unsigned long long addr){
+        return addr>>6;
+    }
     enum rep_policy
     {
         lru,
@@ -106,14 +124,20 @@ public:
         resfail
     };
 
-    cache(int way = 0, int set = 0, rep_policy p = lru, int mshr_num = 16, int mshr_maxmerge = 32);
-    std::pair<int, int> get_size() { return std::make_pair(num_set, num_way); }
+    cache(int way = 0, int set = 0, rep_policy p = lru, int mshr_num = 16, int mshr_maxmerge = 32, const std::string &name = "default_cache");
+    auto get_name() const { return name; }
+    statistics get_stats() const { return m_statistics; }
+    std::pair<int, int> get_size() const { return std::make_pair(num_set, num_way); }
     virtual ~cache() {}
     access_ret access(unsigned long long addr);
-    bool is_clear(){ 
-        for(auto&set_entry:tag_array){
-            for(auto&entry : set_entry){
-                if(entry.get_status()==cache_entry::cache_entry_status::reserved){
+    bool is_clear() const
+    {
+        for (auto &set_entry : tag_array)
+        {
+            for (auto &entry : set_entry)
+            {
+                if (entry.get_status() == cache_entry::cache_entry_status::reserved)
+                {
                     return false;
                 }
             }
@@ -146,6 +170,8 @@ private:
 
     t_array tag_array;
     mshr m_mshr;
+    const std::string name;
+    statistics m_statistics;
 
     friend class cache_debugger;
 };
