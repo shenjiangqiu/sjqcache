@@ -183,11 +183,13 @@ OSTYPE &operator<<(OSTYPE &os, const cache &ca)
     os << ca.get_stats();
     return os;
 }
+inline
 std::ostream &operator<<(std::ostream &os, const cache &ca)
 {
     os << ca.get_stats();
     return os;
 }
+inline
 std::ostream &operator<<(std::ostream &os, cache &ca)
 {
     os << ca.get_stats();
