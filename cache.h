@@ -100,6 +100,8 @@ OSTYPE &operator<<(OSTYPE &os, const statistics &stat)
     os << "num_hit " << stat.num_hit << ",num_miss " << stat.num_miss << ", num_hit_reserved " << stat.num_hit_reserved << ",num_res_fail " << stat.num_res_fail;
     return os;
 }
+class cache;
+
 class cache
 {
     using t_set = std::vector<cache_entry>;
@@ -107,9 +109,9 @@ class cache
     using t_array = std::vector<t_set>;
 
 public:
-    inline
-    static unsigned long long get_block_addr(unsigned long long addr){
-        return addr>>6;
+    inline static unsigned long long get_block_addr(unsigned long long addr)
+    {
+        return addr >> 6;
     }
     enum rep_policy
     {
@@ -175,7 +177,22 @@ private:
 
     friend class cache_debugger;
 };
-
+template <typename OSTYPE>
+OSTYPE &operator<<(OSTYPE &os, const cache &ca)
+{
+    os << ca.get_stats();
+    return os;
+}
+std::ostream &operator<<(std::ostream &os, const cache &ca)
+{
+    os << ca.get_stats();
+    return os;
+}
+std::ostream &operator<<(std::ostream &os, cache &ca)
+{
+    os << ca.get_stats();
+    return os;
+}
 class cache_debugger
 {
 public:
