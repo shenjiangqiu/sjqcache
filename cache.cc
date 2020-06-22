@@ -10,7 +10,7 @@ cache::cache(int way, int set, rep_policy p,
                                         name(name)
 {
 }
-cache::access_ret cache::access(unsigned long long addr)
+cache::access_ret cache::access(unsigned long long addr,int type)
 {
 
     auto blockAddr = addr >> 6;
@@ -39,7 +39,7 @@ cache::access_ret cache::access(unsigned long long addr)
                 //to the first place,and push to mshr
                 if (m_mshr.access(addr) != mshr::mshr_ret::ok)
                 {
-                    m_statistics.num_res_fail++;
+                    m_statistics[type].num_res_fail++;
                     return resfail;
                 }
                 entry.set_entry(blockAddr, cache_entry::cache_entry_status::reserved);
@@ -54,7 +54,7 @@ cache::access_ret cache::access(unsigned long long addr)
                     }
                     it->set_entry(temp.get_tag(), temp.get_status());
                 }
-                m_statistics.num_miss++;
+                m_statistics[type].num_miss++;
                 return miss;
             }
             if (entry.get_tag() == tag) //find the entry
@@ -73,14 +73,14 @@ cache::access_ret cache::access(unsigned long long addr)
                         }
                         it->set_entry(temp.get_tag(), temp.get_status());
                     }
-                    m_statistics.num_hit++;
+                    m_statistics[type].num_hit++;
                     return hit;
                 }
                 else //reserved
                 {
                     if (m_mshr.access(addr) != mshr::mshr_ret::ok)
                     {
-                        m_statistics.num_res_fail++;
+                        m_statistics[type].num_res_fail++;
                         return resfail;
                     }
 
@@ -97,7 +97,7 @@ cache::access_ret cache::access(unsigned long long addr)
                     }
 
                     //to the first place; and push to mshr
-                    m_statistics.num_hit_reserved++;
+                    m_statistics[type].num_hit_reserved++;
                     return hit_res;
                 }
             }
@@ -105,14 +105,14 @@ cache::access_ret cache::access(unsigned long long addr)
         }
         if (all_reserved)
         {
-            m_statistics.num_res_fail++;
+            m_statistics[type].num_res_fail++;
 
             return resfail;
         }
 
         if (m_mshr.access(addr) != mshr::mshr_ret::ok)
         {
-            m_statistics.num_res_fail++;
+            m_statistics[type].num_res_fail++;
 
             return resfail;
         }
@@ -123,7 +123,7 @@ cache::access_ret cache::access(unsigned long long addr)
         cache_entry entry;
         entry.set_entry(addr >> 6, cache_entry::cache_entry_status::reserved);
         set_entry.insert(set_entry.begin(), entry);
-        m_statistics.num_miss++;
+        m_statistics[type].num_miss++;
         return miss;
     }
     else

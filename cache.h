@@ -97,7 +97,10 @@ struct statistics
 template <typename OSTYPE>
 OSTYPE &operator<<(OSTYPE &os, const statistics &stat)
 {
-    os << "num_hit " << stat.num_hit << ",num_miss " << stat.num_miss << ", num_hit_reserved " << stat.num_hit_reserved << ",num_res_fail " << stat.num_res_fail;
+    os << "\nnum_hit: " << stat.num_hit
+       << "\nnum_miss " << stat.num_miss
+       << "\nnum_hit_reserved " << stat.num_hit_reserved
+       << "\nnum_res_fail " << stat.num_res_fail;
     return os;
 }
 class cache;
@@ -128,10 +131,10 @@ public:
 
     cache(int way = 0, int set = 0, rep_policy p = lru, int mshr_num = 16, int mshr_maxmerge = 32, const std::string &name = "default_cache");
     auto get_name() const { return name; }
-    statistics get_stats() const { return m_statistics; }
+    auto get_stats() const { return m_statistics; }
     std::pair<int, int> get_size() const { return std::make_pair(num_set, num_way); }
     virtual ~cache() {}
-    access_ret access(unsigned long long addr);
+    access_ret access(unsigned long long addr, int type);
     bool is_clear() const
     {
         for (auto &set_entry : tag_array)
@@ -173,26 +176,30 @@ private:
     t_array tag_array;
     mshr m_mshr;
     const std::string name;
-    statistics m_statistics;
+    statistics m_statistics[2];
 
     friend class cache_debugger;
 };
 template <typename OSTYPE>
 OSTYPE &operator<<(OSTYPE &os, const cache &ca)
 {
-    os << ca.get_stats();
+    os << ca.get_stats()[0] << std::endl;
+    os << ca.get_stats()[1] << std::endl;
+
     return os;
 }
-inline
-std::ostream &operator<<(std::ostream &os, const cache &ca)
+inline std::ostream &operator<<(std::ostream &os, const cache &ca)
 {
-    os << ca.get_stats();
+    os << ca.get_stats()[0] << std::endl;
+    os << ca.get_stats()[1] << std::endl;
+
     return os;
 }
-inline
-std::ostream &operator<<(std::ostream &os, cache &ca)
+inline std::ostream &operator<<(std::ostream &os, cache &ca)
 {
-    os << ca.get_stats();
+    os << ca.get_stats()[0] << std::endl;
+    os << ca.get_stats()[1] << std::endl;
+
     return os;
 }
 class cache_debugger
