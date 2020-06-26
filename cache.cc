@@ -10,7 +10,67 @@ cache::cache(int way, int set, rep_policy p,
                                         name(name)
 {
 }
-cache::access_ret cache::access(unsigned long long addr,int type)
+cache::access_ret cache::try_access(unsigned long long addr, int type) const
+{
+    auto blockAddr = addr >> 6;
+
+    auto set = blockAddr % num_set;
+    auto tag = blockAddr;
+    auto &set_entry = tag_array[set];
+    auto it = set_entry.begin();
+    auto the_last_unreserved_entry = it;
+    //bug report :
+    //there is a bug here:we may evict an entry that are waiting for fill
+    bool all_reserved = true;
+    for (auto &entry : set_entry)
+    {
+        if (entry.get_status() != cache_entry::cache_entry_status::reserved)
+        {
+            all_reserved = false;
+            the_last_unreserved_entry = it;
+        }
+
+        if (entry.get_status() == cache_entry::cache_entry_status::invalid) //ok just use it
+        {
+            //to the first place,and push to mshr
+            if (m_mshr.try_access(addr) != mshr::mshr_ret::ok)
+            {
+                //m_statistics[type].num_res_fail++;
+                return resfail;
+            }
+
+            return miss;
+        }
+        if (entry.get_tag() == tag) //find the entry
+        {
+            if (entry.get_status() == cache_entry::cache_entry_status::valid)
+            {
+                return hit;
+            }
+            else //reserved
+            {
+                if (m_mshr.try_access(addr) != mshr::mshr_ret::ok)
+                {
+                    return resfail;
+                }
+                return hit_res;
+            }
+        }
+        it++;
+    }
+    if (all_reserved)
+    {
+        return resfail;
+    }
+
+    if (m_mshr.try_access(addr) != mshr::mshr_ret::ok)
+    {
+        return resfail;
+    }
+    //not delete the last unreserved, and insert the new one to the top;
+    return miss;
+}
+cache::access_ret cache::access(unsigned long long addr, int type)
 {
 
     auto blockAddr = addr >> 6;
@@ -55,6 +115,7 @@ cache::access_ret cache::access(unsigned long long addr,int type)
                     it->set_entry(temp.get_tag(), temp.get_status());
                 }
                 m_statistics[type].num_miss++;
+                m_on_going_miss++;
                 return miss;
             }
             if (entry.get_tag() == tag) //find the entry
@@ -124,6 +185,7 @@ cache::access_ret cache::access(unsigned long long addr,int type)
         entry.set_entry(addr >> 6, cache_entry::cache_entry_status::reserved);
         set_entry.insert(set_entry.begin(), entry);
         m_statistics[type].num_miss++;
+        m_on_going_miss++;
         return miss;
     }
     else
@@ -177,7 +239,29 @@ cache::access_ret cache::access(unsigned long long addr,int type)
 }
 
 //start mshr
-
+mshr::mshr_ret mshr::try_access(unsigned long long addr) const
+{
+    auto blockAddr = addr >> 6; //bug
+    if (array.find(blockAddr) != array.end())
+    {
+        if (array.at(blockAddr).size() >= max_merge)
+        {
+            return mshr_ret::merge_full;
+        }
+        //array[blockAddr].push_back(addr);
+        return mshr_ret::ok;
+    }
+    else
+    {
+        if (array.size() >= num_entry)
+        {
+            return mshr_ret::entry_full;
+        }
+        //array.insert(std::make_pair(blockAddr, std::vector<unsigned long long>()));
+        //array[blockAddr].push_back(addr);
+        return mshr_ret::ok;
+    }
+}
 mshr::mshr_ret mshr::access(unsigned long long addr)
 {
     auto blockAddr = addr >> 6; //bug

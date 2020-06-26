@@ -65,6 +65,7 @@ public:
 
                                              };
     mshr_ret access(unsigned long long addr);
+    mshr_ret try_access(unsigned long long addr) const;
     void fill(unsigned long long addr)
     {
         array.erase(addr >> 6);
@@ -129,12 +130,17 @@ public:
         resfail
     };
 
-    cache(int way = 0, int set = 0, rep_policy p = lru, int mshr_num = 16, int mshr_maxmerge = 32, const std::string &name = "default_cache");
+    cache(int way, int set, rep_policy p, int mshr_num, int mshr_maxmerge, const std::string &name);
     auto get_name() const { return name; }
     auto get_stats() const { return m_statistics; }
     std::pair<int, int> get_size() const { return std::make_pair(num_set, num_way); }
     virtual ~cache() {}
     access_ret access(unsigned long long addr, int type);
+    access_ret try_access(unsigned long long addr, int type) const;
+    int get_on_going_misses() const
+    {
+        return m_on_going_miss;
+    }
     bool is_clear() const
     {
         for (auto &set_entry : tag_array)
@@ -166,9 +172,12 @@ public:
                 m_mshr.fill(addr);
             }
         }
+        m_on_going_miss--;
+        ASSERT(m_on_going_miss >= 0, "on going miss should be positive");
     }
 
 private:
+    int m_on_going_miss = 0;
     unsigned num_way;
     unsigned num_set;
     unsigned policy;
