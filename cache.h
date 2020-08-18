@@ -131,6 +131,7 @@ public:
     };
 
     cache(int way, int set, rep_policy p, int mshr_num, int mshr_maxmerge, const std::string &name);
+    cache(int num_associate, int total_size);
     auto get_name() const { return name; }
     auto get_stats() const { return m_statistics; }
     std::pair<int, int> get_size() const { return std::make_pair(num_set, num_way); }
