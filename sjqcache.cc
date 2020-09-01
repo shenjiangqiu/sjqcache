@@ -1,4 +1,4 @@
-#include "cache.h"
+#include "sjqcache.h"
 #include <string>
 namespace sjq
 {

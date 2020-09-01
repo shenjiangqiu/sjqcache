@@ -1,5 +1,5 @@
-#ifndef CACHE_H
-#define CACHE_H
+#ifndef SJQ_CACHE_H
+#define SJQ_CACHE_H
 #include <vector>
 #include <tuple>
 #include <memory>
