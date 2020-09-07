@@ -15,7 +15,7 @@ namespace sjq
     cache::cache(int num_associate, int total_size) : cache(num_associate, (total_size >> 6) / num_associate, rep_policy::lru, 196, 16, "default cache")
     {
     }
-    cache::access_ret cache::try_access(unsigned long long addr, int type) const
+    cache::access_ret cache::try_access(unsigned long long addr, int ) const
     {
         auto blockAddr = addr >> 6;
 
