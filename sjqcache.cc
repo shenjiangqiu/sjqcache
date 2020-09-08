@@ -7,7 +7,7 @@ namespace sjq
                  const std::string &name) : num_way(way),
                                             num_set(set),
                                             policy(p),
-                                            tag_array(t_array(set, t_set(way))),
+                                            tag_array(set, t_set(way)),
                                             m_mshr(mshr_num, mshr_maxmerge),
                                             name(name)
     {
@@ -15,7 +15,7 @@ namespace sjq
     cache::cache(int num_associate, int total_size) : cache(num_associate, (total_size >> 6) / num_associate, rep_policy::lru, 196, 16, "default cache")
     {
     }
-    cache::access_ret cache::try_access(unsigned long long addr, int ) const
+    cache::access_ret cache::try_access(unsigned long long addr, int) const
     {
         auto blockAddr = addr >> 6;
 
