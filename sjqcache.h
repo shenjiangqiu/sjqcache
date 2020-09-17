@@ -63,6 +63,11 @@ namespace sjq
             entry_full,
             merge_full
         };
+        enum class access_type
+        {
+            read,
+            write
+        };
         mshr(int entry = 0, int max_merge = 0) : num_entry(entry),
                                                  max_merge(max_merge){
 
@@ -132,19 +137,24 @@ namespace sjq
             miss,
             resfail
         };
+        enum access_type
+        {
+            read,
+            write
+        };
 
         cache(int way, int set, rep_policy p, int mshr_num, int mshr_maxmerge, const std::string &name);
         cache(int num_associate, int total_size);
         cache() = delete;
         cache(const cache &) = default;
         cache(cache &&) = default;
-        
+
         auto get_name() const { return name; }
         auto get_stats() const { return m_statistics; }
         std::pair<int, int> get_size() const { return std::make_pair(num_set, num_way); }
         virtual ~cache() {}
-        access_ret access(unsigned long long addr, int type);
-        access_ret try_access(unsigned long long addr, int type) const;
+        access_ret access(unsigned long long addr, access_type type);
+        access_ret try_access(unsigned long long addr, access_type type) const;
         int get_on_going_misses() const
         {
             return m_on_going_miss;
@@ -183,9 +193,14 @@ namespace sjq
             m_on_going_miss--;
             ASSERT(m_on_going_miss >= 0, "on going miss should be positive");
         }
+        uint64_t get_last_evict() const
+        {
+            return m_last_evicted_entry;
+        }
 
     private:
         int m_on_going_miss = 0;
+        uint64_t m_last_evicted_entry;
         unsigned num_way;
         unsigned num_set;
         unsigned policy;

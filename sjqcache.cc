@@ -15,7 +15,7 @@ namespace sjq
     cache::cache(int num_associate, int total_size) : cache(num_associate, (total_size >> 6) / num_associate, rep_policy::lru, 196, 16, "default cache")
     {
     }
-    cache::access_ret cache::try_access(unsigned long long addr, int) const
+    cache::access_ret cache::try_access(unsigned long long addr, access_type) const
     {
         auto blockAddr = addr >> 6;
 
@@ -73,9 +73,10 @@ namespace sjq
             return resfail;
         }
         //not delete the last unreserved, and insert the new one to the top;
+
         return miss;
     }
-    cache::access_ret cache::access(unsigned long long addr, int type)
+    cache::access_ret cache::access(unsigned long long addr, access_type type)
     {
 
         auto blockAddr = addr >> 6;
@@ -102,12 +103,17 @@ namespace sjq
                 if (entry.get_status() == cache_entry::cache_entry_status::invalid) //ok just use it
                 {
                     //to the first place,and push to mshr
-                    if (m_mshr.access(addr) != mshr::mshr_ret::ok)
+                    if (type == access_type::read)
                     {
-                        m_statistics[type].num_res_fail++;
-                        return resfail;
+                        if (m_mshr.access(addr) != mshr::mshr_ret::ok)
+                        {
+                            m_statistics[type].num_res_fail++;
+                            return resfail;
+                        }
                     }
-                    entry.set_entry(blockAddr, cache_entry::cache_entry_status::reserved);
+                    entry.set_entry(blockAddr,
+                                    type == access_type::read ? cache_entry::cache_entry_status::reserved : cache_entry::cache_entry_status::valid);
+
                     if (it != set_entry.begin())
                     {
                         //move to begin;
@@ -120,7 +126,8 @@ namespace sjq
                         it->set_entry(temp.get_tag(), temp.get_status());
                     }
                     m_statistics[type].num_miss++;
-                    m_on_going_miss++;
+                    if (type == access_type::read)
+                        m_on_going_miss++;
                     return miss;
                 }
                 if (entry.get_tag() == tag) //find the entry
@@ -144,11 +151,12 @@ namespace sjq
                     }
                     else //reserved
                     {
-                        if (m_mshr.access(addr) != mshr::mshr_ret::ok)
-                        {
-                            m_statistics[type].num_res_fail++;
-                            return resfail;
-                        }
+                        if (type == access_type::read)
+                            if (m_mshr.access(addr) != mshr::mshr_ret::ok)
+                            {
+                                m_statistics[type].num_res_fail++;
+                                return resfail;
+                            }
 
                         if (it != set_entry.begin())
                         {
@@ -175,22 +183,27 @@ namespace sjq
 
                 return resfail;
             }
+            //it's miss and need to evict
+            if (type == access_type::read)
+                if (m_mshr.access(addr) != mshr::mshr_ret::ok)
+                {
+                    m_statistics[type].num_res_fail++;
 
-            if (m_mshr.access(addr) != mshr::mshr_ret::ok)
-            {
-                m_statistics[type].num_res_fail++;
-
-                return resfail;
-            }
+                    return resfail;
+                }
             //not delete the last unreserved, and insert the new one to the top;
             ASSERT((*the_last_unreserved_entry).get_status() != cache_entry::cache_entry_status::reserved, "should not be reserved");
+            m_last_evicted_entry = the_last_unreserved_entry->get_tag() << 6;
             set_entry.erase(the_last_unreserved_entry);
 
             cache_entry entry;
-            entry.set_entry(addr >> 6, cache_entry::cache_entry_status::reserved);
+            entry.set_entry(addr >> 6,
+                            type == access_type::read ? cache_entry::cache_entry_status::reserved : cache_entry::cache_entry_status::valid);
             set_entry.insert(set_entry.begin(), entry);
+            //m_last_evicted_entry = set_entry.back().get_tag() << 6; //return the full addr
             m_statistics[type].num_miss++;
-            m_on_going_miss++;
+            if (type == access_type::read)
+                m_on_going_miss++;
             return miss;
         }
         else
