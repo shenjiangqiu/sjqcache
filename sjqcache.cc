@@ -193,7 +193,15 @@ namespace sjq
                 }
             //not delete the last unreserved, and insert the new one to the top;
             ASSERT((*the_last_unreserved_entry).get_status() != cache_entry::cache_entry_status::reserved, "should not be reserved");
-            m_last_evicted_entry = the_last_unreserved_entry->get_tag() << 6;
+            if (the_last_unreserved_entry->get_status() == cache_entry::cache_entry_status::valid)
+            {
+                m_last_evicted_entry = the_last_unreserved_entry->get_tag() << 6;
+            }
+            else
+            {
+                m_last_evicted_entry = 0;
+            }
+            //m_last_evicted_entry = the_last_unreserved_entry->get_tag() << 6;
             set_entry.erase(the_last_unreserved_entry);
 
             cache_entry entry;
