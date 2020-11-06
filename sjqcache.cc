@@ -128,6 +128,7 @@ namespace sjq
                     m_statistics[type].num_miss++;
                     if (type == access_type::read)
                         m_on_going_miss++;
+                    m_last_evicted_entry = 0;
                     return miss;
                 }
                 if (entry.get_tag() == tag) //find the entry
@@ -151,6 +152,7 @@ namespace sjq
                     }
                     else //reserved
                     {
+                        ASSERT(entry.get_status() == cache_entry::cache_entry_status::reserved, "should reserve");
                         if (type == access_type::read)
                             if (m_mshr.access(addr) != mshr::mshr_ret::ok)
                             {
