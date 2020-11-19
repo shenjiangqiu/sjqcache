@@ -192,6 +192,10 @@ namespace sjq
                 }
             }
             m_on_going_miss--;
+            if (m_on_going_miss < 0)
+            {
+                throw;
+            }
             ASSERT(m_on_going_miss >= 0, "on going miss should be positive");
         }
         uint64_t get_last_evict() const
