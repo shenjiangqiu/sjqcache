@@ -175,6 +175,7 @@ namespace sjq
         }
         void fill(unsigned long long addr)
         {
+            //std::cout << "fill:" << addr << std::endl;
             auto blockAddr = addr >> 6;
             auto set = blockAddr % num_set;
 
