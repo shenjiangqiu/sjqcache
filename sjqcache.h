@@ -214,7 +214,7 @@ namespace sjq {
             for (auto &entry : set_entry) {
                 if (entry.get_tag() == tag) {
                     ASSERT(entry.get_status() == cache_entry::cache_entry_status::reserved, "add=" << addr);
-                    entry.set_entry(tag, cache_entry::cache_entry_status::valid, 0);
+                    entry.set_entry(tag, cache_entry::cache_entry_status::valid, entry.getMType());
                     m_mshr.fill(addr);
                 }
             }
