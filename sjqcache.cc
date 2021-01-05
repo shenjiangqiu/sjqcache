@@ -102,6 +102,7 @@ namespace sjq {
                     entry.set_entry(blockAddr,
                                     type == access_type::read ? cache_entry::cache_entry_status::reserved
                                                               : cache_entry::cache_entry_status::valid, from_type);
+                    if (type == access_type::write) entry.set_dirty();
 
                     if (it != set_entry.begin()) {
                         //move to begin;
@@ -122,6 +123,7 @@ namespace sjq {
                 {
                     if (entry.get_status() == cache_entry::cache_entry_status::valid) {
                         //to the first place;
+                        if (type == access_type::write) entry.set_dirty();
                         if (it != set_entry.begin()) {
                             //move to begin;
                             auto temp = entry;
@@ -141,6 +143,7 @@ namespace sjq {
                                 m_statistics[type].num_res_fail++;
                                 return resfail;
                             }
+                        if (type == access_type::write) entry.set_dirty();
 
                         if (it != set_entry.begin()) {
                             //move to begin;
@@ -187,6 +190,8 @@ namespace sjq {
             entry.set_entry(addr >> 6,
                             type == access_type::read ? cache_entry::cache_entry_status::reserved
                                                       : cache_entry::cache_entry_status::valid, from_type);
+            if (type == access_type::write) entry.set_dirty();
+
             set_entry.insert(set_entry.begin(), entry);
             //m_last_evicted_entry = set_entry.back().get_tag() << 6; //return the full addr
             m_statistics[type].num_miss++;
@@ -268,5 +273,9 @@ namespace sjq {
             array[blockAddr].push_back(addr);
             return mshr_ret::ok;
         }
+    }
+
+    void cache_entry::set_dirty() {
+        dirty = true;
     }
 } // namespace sjq

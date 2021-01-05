@@ -56,16 +56,24 @@ namespace sjq {
             m_type = from_type;
         }
 
-        cache_entry_status get_status() const { return m_status; }
+        [[nodiscard]] cache_entry_status get_status() const { return m_status; }
 
-        unsigned long long get_tag() const { return m_tag; }
+        [[nodiscard]] unsigned long long get_tag() const { return m_tag; }
 
     private:
         cache_entry_status m_status;
         unsigned long long m_tag;
         int m_type{};
+        bool dirty = false;
     public:
-        int getMType() const {
+        [[nodiscard]] bool isDirty() const {
+            return dirty;
+        }
+
+    public:
+        void set_dirty();
+
+        [[nodiscard]] int getMType() const {
             return m_type;
         }
     };
