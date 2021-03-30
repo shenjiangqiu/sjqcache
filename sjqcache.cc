@@ -257,7 +257,7 @@ namespace sjq {
         }
     }
 
-    mshr::mshr_ret mshr::access(unsigned long long addr, int data_from) {
+    mshr::mshr_ret mshr::access(unsigned long long addr, int ) {
         auto blockAddr = addr >> 6; //bug
         if (array.find(blockAddr) != array.end()) {
             if (array[blockAddr].size() >= max_merge) {
